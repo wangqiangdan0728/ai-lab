@@ -1,0 +1,15 @@
+export type Post = { id: string; title: string; body: string };
+
+const posts: Post[] = [
+  { id: '1', title: '第一篇', body: '这是第一篇的内容' },
+  { id: '2', title: '第二篇', body: '这是第二篇的内容' },
+  { id: '3', title: '第三篇', body: '这是第三篇的内容' },
+];
+
+export async function getPosts() {
+  return posts;
+}
+
+export async function getPost(id: string) {
+  return posts.find((p) => p.id === id) ?? null;
+}
