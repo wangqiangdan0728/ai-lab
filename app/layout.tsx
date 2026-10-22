@@ -10,7 +10,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className="p-6">
-        <h1 className="text-lg font-bold">根布局（作用域：全站）</h1>
+        {/* <h1 className="text-lg font-bold">根布局（作用域：全站）</h1>
 
         <Counter label="① 根 layout（app/layout.tsx）" tone="blue" />
 
@@ -27,7 +27,7 @@ export default function RootLayout({
           <Link className="text-blue-600 underline" href="/lab/beta">
             /lab/beta
           </Link>
-        </nav>
+        </nav> */}
 
         {children}
       </body>

@@ -1,17 +1,13 @@
-import Link from 'next/link';
-import { getPosts } from '@/lib/posts';
+import { createPost } from './actions';
 
-export default async function PostsPage() {
-  const posts = await getPosts();
-  return (
-    <ul className="space-y-2 p-6">
-      {posts.map((p) => (
-        <li key={p.id}>
-          <Link className="text-blue-600 underline" href={`/posts/${p.id}`}>
-            {p.title}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-}
+// 在 return 里：
+<form action={createPost} className="mb-6 flex gap-2">
+  <input
+    name="title"
+    placeholder="新文章标题"
+    className="rounded border px-3 py-1"
+  />
+  <button type="submit" className="rounded bg-black px-3 py-1 text-white">
+    添加
+  </button>
+</form>;
