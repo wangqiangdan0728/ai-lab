@@ -1,3 +1,5 @@
+// 'use client'
+
 import Link from 'next/link';
 import { getPosts } from '@/lib/posts';
 import { createPost } from './actions';
@@ -28,7 +30,14 @@ export default async function PostsPage({
         </Link>
       </div>
 
-      <form action={createPost} className="mb-6 flex gap-2">
+      <form
+        // action={createPost}
+        action={async (fd) => {
+          'use server';
+          await createPost(fd);
+        }}
+        className="mb-6 flex gap-2"
+      >
         <input
           name="title"
           placeholder="新文章标题"
