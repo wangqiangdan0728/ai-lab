@@ -6,6 +6,14 @@ let posts: Post[] = [
   { id: '3', title: '第三篇', body: '这是第三篇的内容' },
 ];
 
+export async function getPosts() {
+  return posts;
+}
+
+export async function getPost(id: string) {
+  return posts.find((p) => p.id === id) ?? null;
+}
+
 export async function addPost(title: string) {
   posts = [...posts, { id: String(Date.now()), title, body: '（待补充）' }];
 }
