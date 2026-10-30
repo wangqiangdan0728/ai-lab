@@ -31,11 +31,11 @@ export default async function PostsPage({
       </div>
 
       <form
-        // action={createPost}
-        action={async (fd) => {
-          'use server';
-          await createPost(fd);
-        }}
+        action={createPost}
+        // action={async (fd) => {
+        //   'use server';
+        //   await createPost(fd);
+        // }}
         className="mb-6 flex gap-2"
       >
         <input
