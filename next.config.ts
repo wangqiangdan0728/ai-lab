@@ -12,8 +12,7 @@ const nextConfig: NextConfig = {
       },
     },
   },
-  allowedDevOrigins: ['192.168.1.150'],
-  // allowedDevOrigins: ['192.168.0.26'],
+  allowedDevOrigins: ['192.168.0.11'],
   // reactStrictMode: false,
 };
 

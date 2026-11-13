@@ -27,7 +27,7 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-const prompt = process.argv.slice(2).join(' ') || '数到 5，每个数字一行';
+const prompt = process.argv.slice(2).join(' ') || '输出《悯农》';
 
 // 可用 DS_API_URL 指向本地假服务器（方便离线验证）
 const API_URL =
@@ -82,11 +82,11 @@ while (true) {
 
 console.log('\n' + '='.repeat(60));
 console.log(`共收到 ${chunkNo} 个 chunk，${totalBytes} 字节，耗时 ${Date.now() - t0}ms`);
-console.log(`
-👉 现在回答清单 Day 17 的 5 个问题：
-   Q1: 一个 chunk 里通常有几个 data: 帧？
-   Q2: delta.content 每次给几个字？
-   Q3: 哪一块的 finish_reason 不是 null？
-   Q4: usage 出现在哪一块？
-   Q5: [DONE] 长什么样？
-`);
+// console.log(`
+// 👉 现在回答清单 Day 17 的 5 个问题：
+//    Q1: 一个 chunk 里通常有几个 data: 帧？
+//    Q2: delta.content 每次给几个字？
+//    Q3: 哪一块的 finish_reason 不是 null？
+//    Q4: usage 出现在哪一块？
+//    Q5: [DONE] 长什么样？
+// `);

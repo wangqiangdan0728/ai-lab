@@ -38,10 +38,35 @@ if (!API_KEY) {
   process.exit(1);
 }
 
+function getArgvVal(name) {
+  const index = process.argv.indexOf(name);
+  if (index === -1) return null; // ← 没传：安静返回，不打印
+
+  const val = process.argv[index + 1];
+  if (val === undefined || val.startsWith('--')) {
+    console.error(`❌ ${name} 后面缺少值`);
+    process.exit(1);
+  }
+  return val;
+}
+
+// system 可选：没传就静默用默认
+const SYS =
+  getArgvVal('--system') ?? '你是一个简洁的中文助手，回答尽量三句话以内。';
+
+// temp 可选：没传用 0；传了非法值就报错退出
+let temp = 0;
+const tempArg = getArgvVal('--temp');
+if (tempArg !== null) {
+  temp = Number(tempArg);
+  if (!Number.isFinite(temp) || temp < 0 || temp > 2) {
+    console.error(`❌ --temp 必须是 0～2 的数字，收到：${tempArg}`);
+    process.exit(1);
+  }
+}
+
 // 🧠 「记忆」就在这个数组里 —— 靠每次把完整历史重新发过去
-const messages = [
-  { role: 'system', content: '你是一个简洁的中文助手，回答尽量三句话以内。' },
-];
+const messages = [{ role: 'system', content: SYS }];
 
 // 累计 token，供 Day 14 算账用
 let totalPrompt = 0;
@@ -52,7 +77,9 @@ async function chat(userText) {
   messages.push({ role: 'user', content: userText });
 
   try {
-    const data = await complete(messages);
+    const data = await complete(messages, {
+      temperature: temp,
+    });
     const reply = data.choices?.[0]?.message?.content ?? '(空回复)';
     messages.push({ role: 'assistant', content: reply });
 
@@ -130,7 +157,9 @@ const priceCompletion = totalCompletion * PRICE_OUTPUT;
 const totalPrice = pricePrompt + priceCompletion;
 
 console.log(`\n📊 本次会话：${totalPrompt} 入 / ${totalCompletion} 出`);
-console.log(`💵 输入 $${pricePrompt.toFixed(6)} + 输出 $${priceCompletion.toFixed(6)}`);
+console.log(
+  `💵 输入 $${pricePrompt.toFixed(6)} + 输出 $${priceCompletion.toFixed(6)}`,
+);
 console.log(
   `💰 合计：$${totalPrice.toFixed(6)}（≈ ¥${(totalPrice * USD_TO_CNY).toFixed(4)}）`,
 );

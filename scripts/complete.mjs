@@ -12,7 +12,6 @@ export const MODEL = 'deepseek-flash';
 export const DEFAULT_TIMEOUT_MS = Number(process.env.DS_TIMEOUT_MS ?? 30_000);
 export const DEFAULT_MAX_RETRIES = Number(process.env.DS_MAX_RETRIES ?? 3);
 
-
 export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -22,6 +21,7 @@ export async function complete(
   {
     model = MODEL,
     thinking = { type: 'disabled' },
+    temperature = 0,
     maxRetries = DEFAULT_MAX_RETRIES,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     apiUrl = API_URL,
@@ -41,7 +41,13 @@ export async function complete(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${API_KEY}`,
         },
-        body: JSON.stringify({ model, messages, thinking, stream: false }),
+        body: JSON.stringify({
+          model,
+          messages,
+          thinking,
+          stream: false,
+          temperature,
+        }),
         signal: controller.signal, // ← 超时信号
       });
 
