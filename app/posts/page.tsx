@@ -1,6 +1,7 @@
 // 'use client'
 
 import Link from 'next/link';
+export const instant = false;
 import { getPosts } from '@/lib/posts';
 import { createPost } from './actions';
 

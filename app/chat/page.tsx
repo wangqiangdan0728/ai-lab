@@ -64,7 +64,7 @@ export default function Chat() {
         </div>
       )}
       <button
-        className="rounded border px-4 py-2 qk"
+        className="rounded border px-4 py-2"
         onClick={() => setMessages([])}
       >
         清空
