@@ -5,7 +5,16 @@ import { useState } from 'react';
 
 export default function Chat() {
   const [input, setInput] = useState('');
-  const { messages, sendMessage, status, error } = useChat();
+  const {
+    messages,
+    sendMessage,
+    setMessages,
+    status,
+    error,
+    regenerate,
+    stop,
+  } = useChat();
+  const isLoading = status === 'submitted' || status === 'streaming';
 
   return (
     // 抵消 layout.tsx 里 body 的 p-6（上下共 3rem）
@@ -21,7 +30,9 @@ export default function Chat() {
         {messages.map((m) => (
           <div
             key={m.id}
-            className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
+            className={
+              m.role === 'user' ? 'flex justify-end' : 'flex justify-start'
+            }
           >
             <div
               className={`max-w-[70%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
@@ -36,19 +47,43 @@ export default function Chat() {
             </div>
           </div>
         ))}
+
+        {status === 'submitted' && (
+          <div className="flex justify-start">
+            <div className="mr-auto flex items-center gap-2 rounded-2xl bg-slate-200 px-3 py-2 text-sm text-slate-500">
+              <span className="animate-pulse">思考中…</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {error && (
-        <p className="shrink-0 pb-2 text-sm text-red-500">出错了：{error.message}</p>
+        <div className="text-red-500 text-sm">
+          出错了：{error.message}
+          <button onClick={() => regenerate()}>重试</button>
+        </div>
       )}
-
+      <button
+        className="rounded border px-4 py-2 qk"
+        onClick={() => setMessages([])}
+      >
+        清空
+      </button>
       {/* ② 输入区：吸底，不许被压 */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (!input.trim() || status === 'streaming' || status === 'submitted') return;
+          if (!input.trim() || isLoading) return;
           sendMessage({ text: input });
           setInput('');
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (!input.trim() || isLoading) return;
+            sendMessage({ text: input });
+            setInput('');
+          }
         }}
         className="flex shrink-0 gap-2 border-t pt-4"
       >
@@ -58,7 +93,11 @@ export default function Chat() {
           className="flex-1 rounded border px-3 py-2"
           placeholder="说点什么…"
         />
-        <button type="submit" className="rounded border px-4 py-2">
+        <button
+          type="submit"
+          className="rounded border px-4 py-2"
+          disabled={isLoading}
+        >
           发送
         </button>
       </form>
