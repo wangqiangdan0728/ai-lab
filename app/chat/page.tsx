@@ -77,14 +77,6 @@ export default function Chat() {
           sendMessage({ text: input });
           setInput('');
         }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            if (!input.trim() || isLoading) return;
-            sendMessage({ text: input });
-            setInput('');
-          }
-        }}
         className="flex shrink-0 gap-2 border-t pt-4"
       >
         <input
@@ -93,13 +85,20 @@ export default function Chat() {
           className="flex-1 rounded border px-3 py-2"
           placeholder="说点什么…"
         />
-        <button
-          type="submit"
-          className="rounded border px-4 py-2"
-          disabled={isLoading}
-        >
-          发送
-        </button>
+
+        {isLoading ? (
+          <button
+            type="button"
+            onClick={() => stop()}
+            className="rounded border px-4 py-2"
+          >
+            停止
+          </button>
+        ) : (
+          <button type="submit" className="rounded border px-4 py-2">
+            发送
+          </button>
+        )}
       </form>
     </div>
   );
