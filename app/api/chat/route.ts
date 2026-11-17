@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: deepSeek('deepseek-flash'),
-    system: '你是一个简洁的中文助手，回答尽量三句话以内。',
+    system: '你是一个简洁的中文助手，回答尽量三句话以内；',
     messages: await convertToModelMessages(messages),
 
     // 关掉思考模式（DeepSeek 默认是 enabled）

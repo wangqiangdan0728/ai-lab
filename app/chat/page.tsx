@@ -2,6 +2,8 @@
 
 import { useChat } from '@ai-sdk/react';
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function Chat() {
   const [input, setInput] = useState('');
@@ -94,7 +96,9 @@ export default function Chat() {
               >
                 {m.parts.map((part, i) =>
                   part.type === 'text' ? (
-                    <span key={i}>{part.text}</span>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {part.text}
+                    </ReactMarkdown>
                   ) : null,
                 )}
               </div>
