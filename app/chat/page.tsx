@@ -1,9 +1,118 @@
 'use client';
-
+import ReactMarkdown, { type Components } from 'react-markdown';
 import { useChat } from '@ai-sdk/react';
 import { useEffect, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import type { ReactElement, ReactNode } from 'react';
 import remarkGfm from 'remark-gfm';
+import { codeToHtml } from 'shiki';
+
+function CodeBlock({ code, lang }: { code: string; lang: string }) {
+  const [shown, setShown] = useState<{ code: string; html: string }>({
+    code: '',
+    html: '',
+  });
+
+  useEffect(() => {
+    let alive = true;
+    // 内容还在变 → 不断重置定时器 → 永远不会触发
+    // 内容稳定 300ms → 触发一次 → 高亮一次
+    const timer = setTimeout(() => {
+      const t0 = performance.now();
+      codeToHtml(code, { lang: lang || 'text', theme: 'github-dark' }).then(
+        (h) => {
+          if (alive) {
+            console.log(
+              '[shiki]',
+              code.length,
+              Math.round(performance.now() - t0),
+              'ms',
+            );
+            setShown({ code, html: h });
+          }
+        },
+      );
+    }, 300);
+
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [code, lang]);
+
+  // 只有「当前 code 已经有对应的着色结果」才显示彩色版本
+  if (shown.html && shown.code === code) {
+    return (
+      <div
+        className="my-2 overflow-x-auto rounded-lg text-xs"
+        dangerouslySetInnerHTML={{ __html: shown.html }}
+      />
+    );
+  }
+  return (
+    <pre className="my-2 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
+      {code}
+    </pre>
+  );
+}
+
+const REMARK_PLUGINS = [remarkGfm];
+
+const MD_COMPONENTS: Components = {
+  table: ({ node, ...props }) => (
+    <div className="my-2 overflow-x-auto">
+      <table className="w-full border-collapse text-sm" {...props} />
+    </div>
+  ),
+  th: ({ node, ...props }) => (
+    <th
+      className="border border-slate-300 bg-slate-100 px-2 py-1 text-left font-semibold"
+      {...props}
+    />
+  ),
+  td: ({ node, ...props }) => (
+    <td className="border border-slate-300 px-2 py-1 align-top" {...props} />
+  ),
+  p: ({ node, ...props }) => <p className="my-1 leading-relaxed" {...props} />,
+  ul: ({ node, ...props }) => <ul className="my-1 list-disc pl-5" {...props} />,
+  ol: ({ node, ...props }) => (
+    <ol className="my-1 list-decimal pl-5" {...props} />
+  ),
+  li: ({ node, ...props }) => <li className="my-0.5" {...props} />,
+  h1: ({ node, ...props }) => (
+    <h1 className="mt-3 mb-1 text-base font-bold" {...props} />
+  ),
+  h2: ({ node, ...props }) => (
+    <h2 className="mt-3 mb-1 text-sm font-bold" {...props} />
+  ),
+  h3: ({ node, ...props }) => (
+    <h3 className="mt-2 mb-1 text-sm font-semibold" {...props} />
+  ),
+  pre: ({ node, children }) => {
+    const el = children as ReactElement<{
+      className?: string;
+      children?: ReactNode;
+    }>;
+    const lang =
+      /language-(\w+)/.exec(el?.props?.className ?? '')?.[1] ?? 'text';
+    const code = String(el?.props?.children ?? '');
+    return <CodeBlock code={code} lang={lang} />;
+  },
+  code: ({ node, className, children, ...props }) => {
+    const isBlock = /language-/.test(className ?? '');
+    return isBlock ? (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    ) : (
+      <code
+        className="rounded bg-slate-200 px-1 py-0.5 text-[0.85em]"
+        {...props}
+      >
+        {children}
+      </code>
+    );
+  },
+};
 
 export default function Chat() {
   const [input, setInput] = useState('');
@@ -88,15 +197,19 @@ export default function Chat() {
               }
             >
               <div
-                className={`max-w-[70%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
+                className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm ${
                   m.role === 'user'
                     ? 'bg-slate-800 text-white'
                     : 'bg-slate-200 text-slate-900'
                 }`}
               >
-                {m.parts.map((part, i) =>
+                {m.parts.map((part, index) =>
                   part.type === 'text' ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown
+                      key={index}
+                      remarkPlugins={REMARK_PLUGINS}
+                      components={MD_COMPONENTS}
+                    >
                       {part.text}
                     </ReactMarkdown>
                   ) : null,
