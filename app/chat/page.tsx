@@ -225,45 +225,54 @@ export default function Chat() {
                     : 'bg-slate-200 text-slate-900'
                 }`}
               >
-                {m.parts.map((part, index) =>
-                  part.type === 'text' ? (
-                    <ReactMarkdown
-                      key={index}
-                      remarkPlugins={REMARK_PLUGINS}
-                      components={MD_COMPONENTS}
-                    >
-                      {part.text}
-                    </ReactMarkdown>
-                  ) : null,
+                {editing?.index === i ? (
+                  <div className="flex flex-col gap-2">
+                    <input
+                      autoFocus
+                      value={editing.text}
+                      onChange={(e) =>
+                        setEditing({ index: i, text: e.target.value })
+                      }
+                      onKeyDown={(e) => {
+                        // 中文输入法选字时按回车是「上屏」，不是提交
+                        if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                          e.preventDefault();
+                          submitEdit();
+                        }
+                      }}
+                      className="w-full rounded border px-2 py-1 text-sm text-slate-900"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={submitEdit}
+                        className="rounded border border-slate-400 px-3 py-1 text-xs text-slate-900"
+                      >
+                        重发
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditing(null)}
+                        className="rounded border border-slate-400 px-3 py-1 text-xs text-slate-900"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  m.parts.map((part, index) =>
+                    part.type === 'text' ? (
+                      <ReactMarkdown
+                        key={index}
+                        remarkPlugins={REMARK_PLUGINS}
+                        components={MD_COMPONENTS}
+                      >
+                        {part.text}
+                      </ReactMarkdown>
+                    ) : null,
+                  )
                 )}
               </div>
-
-              {/* 编辑态：输入框 + 重发/取消 */}
-              {editing?.index === i && (
-                <div className="mt-2 flex w-full gap-2">
-                  <input
-                    value={editing.text}
-                    onChange={(e) =>
-                      setEditing({ index: i, text: e.target.value })
-                    }
-                    className="flex-1 rounded border px-2 py-1 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={submitEdit}
-                    className="rounded border px-3 py-1 text-sm"
-                  >
-                    重发
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditing(null)}
-                    className="rounded border px-3 py-1 text-sm"
-                  >
-                    取消
-                  </button>
-                </div>
-              )}
 
               {/* 编辑按钮：只有用户消息、非流式、且不在编辑态时显示 */}
               {m.role === 'user' && !isLoading && editing?.index !== i && (
@@ -316,7 +325,10 @@ export default function Chat() {
         <button
           type="button"
           className="rounded border px-4 py-2"
-          onClick={() => setMessages([])}
+          onClick={() => {
+            setMessages([]);
+            setEditing(null); // 清空时顺手清掉编辑态，否则 editing 还指向旧下标
+          }}
         >
           清空
         </button>
