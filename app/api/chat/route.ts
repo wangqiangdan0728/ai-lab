@@ -9,6 +9,7 @@ import { deepSeek } from '@ai-sdk/deepseek';
 
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
+  console.log(111, JSON.stringify(await convertToModelMessages(messages)));
 
   const result = streamText({
     model: deepSeek('deepseek-flash'),

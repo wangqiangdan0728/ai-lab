@@ -133,6 +133,28 @@ export default function Chat() {
   const stickRef = useRef(true); // 是否「粘」在底部（用 ref 避免闭包拿到旧值）
   const programmatic = useRef(false); // 这次滚动是不是我们自己触发的
   const [stick, setStick] = useState(true); // 同上的 state，只为了显示「回到底部」按钮
+  const [editing, setEditing] = useState<{
+    index: number;
+    text: string;
+  } | null>(null);
+
+  function textOf(m: (typeof messages)[number]) {
+    return m.parts
+      .filter((p) => p.type === 'text')
+      .map((p) => p.text)
+      .join('');
+  }
+
+  function submitEdit() {
+    if (!editing || isLoading) return;
+    const text = editing.text.trim();
+    if (!text) return; // 边界三：空内容不发
+    const cut = editing.index; // 保留这条之前的消息
+    setEditing(null);
+    setMessages(messages.slice(0, cut)); // ① 先截断
+    jumpToBottom();
+    sendMessage({ text }); // ② 再发
+  }
 
   function scrollToBottom() {
     const el = listRef.current;
@@ -189,7 +211,7 @@ export default function Chat() {
             </div>
           )}
 
-          {messages.map((m) => (
+          {messages.map((m, i) => (
             <div
               key={m.id}
               className={
@@ -215,6 +237,44 @@ export default function Chat() {
                   ) : null,
                 )}
               </div>
+
+              {/* 编辑态：输入框 + 重发/取消 */}
+              {editing?.index === i && (
+                <div className="mt-2 flex w-full gap-2">
+                  <input
+                    value={editing.text}
+                    onChange={(e) =>
+                      setEditing({ index: i, text: e.target.value })
+                    }
+                    className="flex-1 rounded border px-2 py-1 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={submitEdit}
+                    className="rounded border px-3 py-1 text-sm"
+                  >
+                    重发
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(null)}
+                    className="rounded border px-3 py-1 text-sm"
+                  >
+                    取消
+                  </button>
+                </div>
+              )}
+
+              {/* 编辑按钮：只有用户消息、非流式、且不在编辑态时显示 */}
+              {m.role === 'user' && !isLoading && editing?.index !== i && (
+                <button
+                  type="button"
+                  onClick={() => setEditing({ index: i, text: textOf(m) })}
+                  className="mt-1 text-xs text-slate-500 underline"
+                >
+                  编辑
+                </button>
+              )}
             </div>
           ))}
 
