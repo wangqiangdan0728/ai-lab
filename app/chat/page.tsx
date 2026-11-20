@@ -195,6 +195,56 @@ export default function Chat() {
     scrollToBottom();
   }
 
+  const times = useRef(new Map<string, number>());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function timeOf(id: string) {
+    if (!times.current.has(id)) times.current.set(id, Date.now());
+    return times.current.get(id)!;
+  }
+
+  // 非安全上下文（http + 局域网 IP）下 navigator.clipboard 不存在，
+  // 只能用老的 execCommand；它虽已废弃，但仍是唯一可用方案。
+  function fallbackCopy(text: string) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', ''); // 否则 iOS 会弹键盘
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0'; // 别让它出现在页面上
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async function copyText(text: string, id: string) {
+    let ok = false;
+
+    // ★ 不能写成 navigator.clipboard?.writeText(text).catch(...)：
+    //   可选链一旦短路，后面的 .catch 根本不会注册 → 兜底永远不执行。
+    //   必须先判断「有没有 + 安不安全」，再显式分支。
+    if (window.isSecureContext && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      } catch {
+        ok = false; // 权限被拒等情况，落到下面的兜底
+      }
+    }
+    if (!ok) ok = fallbackCopy(text);
+
+    // 只有真的复制成功才提示，否则「已复制」是在骗人
+    if (!ok) return;
+    setCopiedId(id);
+    setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
+  }
+
   return (
     // 抵消 layout.tsx 里 body 的 p-6（上下共 3rem）
     <div className="relative mx-auto flex h-[calc(100vh-3rem)] max-w-2xl flex-col">
@@ -284,6 +334,24 @@ export default function Chat() {
                   编辑
                 </button>
               )}
+
+              <div className="mt-1 flex items-center gap-3 text-xs text-slate-400">
+                <span>
+                  {new Date(timeOf(m.id)).toLocaleTimeString('zh-CN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+                {m.role === 'assistant' && (
+                  <button
+                    type="button"
+                    onClick={() => copyText(textOf(m), m.id)}
+                    className="underline"
+                  >
+                    {copiedId === m.id ? '已复制' : '复制'}
+                  </button>
+                )}
+              </div>
             </div>
           ))}
 
@@ -328,6 +396,7 @@ export default function Chat() {
           onClick={() => {
             setMessages([]);
             setEditing(null); // 清空时顺手清掉编辑态，否则 editing 还指向旧下标
+            times.current.clear(); // 时间表也清掉，不然旧 id 会一直留在 Map 里
           }}
         >
           清空
