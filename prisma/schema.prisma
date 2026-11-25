@@ -1,0 +1,38 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  title     String   @default("新对话")
+  model     String   @default("deepseek-flash")
+  thinking  Boolean  @default(false)
+  messages  Message[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  model          String?
+  inputTokens    Int?
+  outputTokens   Int?
+  cacheHitTokens Int?
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+}

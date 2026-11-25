@@ -1,3 +1,5 @@
+import { prisma } from '@/lib/prisma';
+
 import {
   streamText,
   convertToModelMessages,
@@ -8,8 +10,18 @@ import {
 import { deepSeek } from '@ai-sdk/deepseek';
 
 export async function POST(req: Request) {
-  const { messages }: { messages: UIMessage[] } = await req.json();
-  const t0 = Date.now();
+  const body = await req.json();
+  const { messages, conversationId } = body;
+  const lastUser = messages[messages.length - 1];
+
+  await prisma.message.create({
+    data: {
+      conversationId,
+      role: 'user',
+      content: lastUser.parts?.map((p: any) => p.text ?? '').join('') ?? '',
+    },
+  });
+
   const result = streamText({
     model: deepSeek('deepseek-flash'),
     system: '你是一个简洁的中文助手，回答尽量三句话以内；',
@@ -26,19 +38,22 @@ export async function POST(req: Request) {
     // ★ 关键：客户端断开 → 中止上游请求（省 token）
     abortSignal: req.signal,
 
-    // 只是日志，看清到底走了哪条路
-    onFinish: ({ usage, finishReason }) => {
-      console.log(`（+${Date.now() - t0}ms`);
-      console.log(
-        '[usage]',
-        JSON.stringify({
-          input: usage.inputTokens,
-          cacheHit: usage.inputTokenDetails.cacheReadTokens,
-          noCache: usage.inputTokenDetails.noCacheTokens,
-          output: usage.outputTokens,
-        }),
-        finishReason,
-      );
+    onFinish: async ({ text, usage }) => {
+      await prisma.message.create({
+        data: {
+          conversationId,
+          role: 'assistant',
+          content: text,
+          model: 'deepseek-flash',
+          inputTokens: usage.inputTokens ?? null,
+          outputTokens: usage.outputTokens ?? null,
+          cacheHitTokens: usage.inputTokenDetails?.cacheReadTokens ?? null,
+        },
+      });
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: { updatedAt: new Date() },
+      });
     },
     onAbort: ({ steps }) => {
       console.log('[chat] ⛔ 被中止（客户端断开）', {

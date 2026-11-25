@@ -42,3 +42,13 @@ next-env.d.ts
 
 # local shell config (contains secrets)
 .zshrc
+
+/lib/generated/prisma
+
+# Prisma
+prisma/*.db
+
+# Prisma / SQLite（实测：数据库文件在项目根，不在 prisma/ 目录）
+dev.db
+dev.db-journal
+prisma/*.db

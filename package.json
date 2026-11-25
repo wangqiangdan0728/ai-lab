@@ -11,6 +11,8 @@
   "dependencies": {
     "@ai-sdk/deepseek": "^3.0.80",
     "@ai-sdk/react": "^4.0.167",
+    "@prisma/adapter-better-sqlite3": "7.10.1",
+    "@prisma/client": "7.10.1",
     "ai": "^7.0.163",
     "next": "16.4.6",
     "react": "19.3.0",
@@ -24,8 +26,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^18.0.10",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "prisma": "7.10.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
