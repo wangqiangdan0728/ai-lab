@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import remarkGfm from 'remark-gfm';
 import { codeToHtml } from 'shiki';
-import { createConversation } from './actions';
+import { clearConversation, createConversation, truncateTo } from './actions';
 
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
   const [shown, setShown] = useState<{ code: string; html: string }>({
@@ -153,15 +153,18 @@ export default function ChatClient({
       .join('');
   }
 
-  function submitEdit() {
+  async function submitEdit() {
     if (!editing || isLoading) return;
     const text = editing.text.trim();
     if (!text) return; // 边界三：空内容不发
     const cut = editing.index; // 保留这条之前的消息
     setEditing(null);
-    setMessages(messages.slice(0, cut)); // ① 先截断
+    setMessages(messages.slice(0, cut)); // ① 先截断屏幕
+    // ② 再把库里「这条及之后」删掉 —— 少了这一步，旧消息留在库里，
+    //    新的一轮又 append 两条，刷新就多出两条（线上真踩）
+    await truncateTo(conversationId, cut);
     jumpToBottom();
-    sendMessage({ text }, { body: { conversationId } }); // ② 再发
+    sendMessage({ text }, { body: { conversationId } }); // ③ 最后发
   }
 
   function scrollToBottom() {
@@ -206,9 +209,13 @@ export default function ChatClient({
   const times = useRef(new Map<string, number>());
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  function timeOf(id: string) {
-    if (!times.current.has(id)) times.current.set(id, Date.now());
-    return times.current.get(id)!;
+  function timeOf(m: (typeof messages)[number]) {
+    // ① 来自数据库的历史消息：page.tsx 已经把 createdAt 塞进 metadata
+    const fromDb = (m.metadata as { createdAt?: string } | undefined)?.createdAt;
+    if (fromDb) return new Date(fromDb).getTime();
+    // ② 本次会话新发的消息：库里还没有，用本地时间兜底
+    if (!times.current.has(m.id)) times.current.set(m.id, Date.now());
+    return times.current.get(m.id)!;
   }
 
   // 非安全上下文（http + 局域网 IP）下 navigator.clipboard 不存在，
@@ -345,7 +352,7 @@ export default function ChatClient({
 
               <div className="mt-1 flex items-center gap-3 text-xs text-slate-400">
                 <span>
-                  {new Date(timeOf(m.id)).toLocaleTimeString('zh-CN', {
+                  {new Date(timeOf(m)).toLocaleTimeString('zh-CN', {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}
@@ -401,8 +408,9 @@ export default function ChatClient({
         <button
           type="button"
           className="rounded border px-4 py-2"
-          onClick={() => {
-            setMessages([]);
+          onClick={async () => {
+            await clearConversation(conversationId); // ① 先把库里的删掉
+            setMessages([]); // ② 再清屏幕
             setEditing(null); // 清空时顺手清掉编辑态，否则 editing 还指向旧下标
             times.current.clear(); // 时间表也清掉，不然旧 id 会一直留在 Map 里
           }}

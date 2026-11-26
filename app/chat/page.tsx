@@ -51,6 +51,9 @@ async function ChatHistory() {
     id: m.id,
     role: m.role as 'user' | 'assistant',
     parts: [{ type: 'text' as const, text: m.content }],
+    // ★ 把数据库里的时间一起带过去。
+    //   少了这一行，前端只能用 Date.now() 兜底 → 刷新后所有历史消息都显示成"刚刚"。
+    metadata: { createdAt: m.createdAt.toISOString() },
   }));
 
   // 数据作为 props 交给客户端组件（跨边界传的是数据，不是代码）
