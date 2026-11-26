@@ -23,10 +23,22 @@ async function ChatHistory() {
   // 刷新页面看到的永远是构建那一刻的历史。
   await connection();
 
-  const conv = await prisma.conversation.findFirst({
+  let conv = await prisma.conversation.findFirst({
     orderBy: { updatedAt: 'desc' },
   });
-  const conversationId = conv?.id ?? 'c-test';
+
+  if (!conv) {
+    conv = await prisma.conversation.create({
+      data: {
+        title: '新对话',
+        model: 'deepseek-flash',
+        thinking: false,
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+  const conversationId = conv.id;
 
   // 服务端读历史：刷新页面 = 重新执行这个函数 = 再从库里取一遍
   const rows = await prisma.message.findMany({
