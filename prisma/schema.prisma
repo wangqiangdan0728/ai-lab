@@ -14,12 +14,18 @@ datasource db {
 
 model Conversation {
   id        String   @id @default(cuid())
+  // ★ 归属：这个会话属于哪个浏览器（proxy.ts 发的 wqd_sid）。
+  //   问号 = 可空：之前那条"没人认领"的旧会话是 null，不能因此让迁移失败。
+  sid       String?
   title     String   @default("新对话")
   model     String   @default("deepseek-flash")
   thinking  Boolean  @default(false)
   messages  Message[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // 查"我的会话"时要按 sid 过滤，给它建索引。
+  @@index([sid])
 }
 
 model Message {

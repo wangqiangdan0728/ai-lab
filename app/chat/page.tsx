@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { connection } from 'next/server';
+import { cookies } from 'next/headers';
 import type { UIMessage } from 'ai';
 import { prisma } from '@/lib/prisma';
 import ChatClient from './chat-client';
@@ -23,13 +24,22 @@ async function ChatHistory() {
   // 刷新页面看到的永远是构建那一刻的历史。
   await connection();
 
-  let conv = await prisma.conversation.findFirst({
-    orderBy: { updatedAt: 'desc' },
-  });
+  // ★ 第一步先问"你是谁"，再问"你的会话在哪"。
+  //   proxy.ts 保证了第一次访问也已经有这个 cookie（它改写了本次请求的头）。
+  const sid = (await cookies()).get('wqd_sid')?.value ?? null;
+
+  // 只找"我自己的"最近一条 —— 以前这里是"全库最近更新的一条"，所以谁打开都看到别人。
+  let conv = sid
+    ? await prisma.conversation.findFirst({
+        where: { sid },
+        orderBy: { updatedAt: 'desc' },
+      })
+    : null;
 
   if (!conv) {
     conv = await prisma.conversation.create({
       data: {
+        sid, // ← 归属。少了这一行，新建的会话又是"无主"的。
         title: '新对话',
         model: 'deepseek-flash',
         thinking: false,
