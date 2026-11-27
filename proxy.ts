@@ -44,6 +44,9 @@ export function proxy(request: NextRequest) {
     httpOnly: true,
     // sameSite lax：同站点正常发，跨站 POST 不带（挡掉一部分 CSRF）。
     sameSite: 'lax',
+    // secure：只在 HTTPS 上发。线上必须开，否则理论上能被 http 明文带走；
+    // 本地是 http://localhost，开了就存不进去 —— 所以按环境区分。
+    secure: process.env.NODE_ENV === 'production',
     path: '/',
     // 一年。不设的话是"会话 cookie"，关掉浏览器就没了 → 回来变陌生人。
     maxAge: 60 * 60 * 24 * 365,
