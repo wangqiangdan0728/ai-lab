@@ -23,7 +23,7 @@ async function requireOwned(conversationId: string) {
 
 export async function createConversation() {
   const sid = await currentSid();
-  await prisma.conversation.create({
+  const conv = await prisma.conversation.create({
     data: {
       sid, // ← 归属。少了这一行，新会话又是"无主"的。
       title: '新对话',
@@ -31,9 +31,13 @@ export async function createConversation() {
       thinking: false,
       updatedAt: new Date(), // ← 这个字段 NOT NULL 又没有默认值，必须给
     },
+    select: { id: true },
   });
 
   revalidatePath('/chat'); // 让 /chat 的服务端部分重新跑一遍
+
+  // ★ Server Action 也能返回值。客户端要拿这个 id 跳到 /chat?c=新id
+  return conv.id;
 }
 
 // 清空 = 真的把库里的消息删掉（不是只清浏览器那一份）

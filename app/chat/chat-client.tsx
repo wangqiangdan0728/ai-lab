@@ -1,4 +1,6 @@
 'use client';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import { useChat } from '@ai-sdk/react';
 import type { UIMessage } from 'ai';
@@ -116,13 +118,22 @@ const MD_COMPONENTS: Components = {
   },
 };
 
+export type ConversationItem = {
+  id: string;
+  title: string;
+  updatedAt: string; // ISO 字符串：跨边界只传数据，别传 Date
+};
+
 export default function ChatClient({
   initialMessages,
+  conversations,
   conversationId,
 }: {
   initialMessages: UIMessage[];
+  conversations: ConversationItem[];
   conversationId: string;
 }) {
+  const router = useRouter();
   const [input, setInput] = useState('');
   const {
     messages,
@@ -132,7 +143,14 @@ export default function ChatClient({
     error,
     regenerate,
     stop,
-  } = useChat({ messages: initialMessages });
+  } = useChat({
+    messages: initialMessages,
+    // ★ 一轮回答结束 → 让服务端重新渲染一次。
+    //   侧边栏的标题是页面第一次渲染时从库里取的；
+    //   新会话发第一句话后标题变了，不 refresh 就还是「新对话」。
+    //   refresh 不会重建 ChatClient（key 没变），消息不会丢。
+    onFinish: () => router.refresh(),
+  });
   const isLoading = status === 'submitted' || status === 'streaming';
 
   // ——————————————— 滚动控制 ———————————————
@@ -262,7 +280,39 @@ export default function ChatClient({
 
   return (
     // 抵消 layout.tsx 里 body 的 p-6（上下共 3rem）
-    <div className="relative mx-auto flex h-[calc(100vh-3rem)] max-w-2xl flex-col">
+    <div className="mx-auto flex h-[calc(100vh-3rem)] w-full max-w-5xl gap-4">
+      {/* 侧边栏：会话列表。窄屏（<640px）先藏起来，手机上只看聊天本身 */}
+      <aside className="hidden w-56 shrink-0 flex-col overflow-y-auto border-r border-slate-200 pr-3 sm:flex">
+        <div className="mb-2 text-xs font-semibold text-slate-500">历史会话</div>
+        {conversations.map((conv) => {
+          const active = conv.id === conversationId;
+          return (
+            <Link
+              key={conv.id}
+              // 切换会话走 URL，而不是存在组件状态里：
+              // 好处是能后退、能刷新、能把地址发给别人（对方看不到内容，因为 sid 不同）
+              href={`/chat?c=${conv.id}`}
+              className={`mb-1 block rounded px-3 py-2 text-sm ${
+                active
+                  ? 'bg-slate-800 text-white'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <div className="truncate">{conv.title}</div>
+              <div
+                className={`text-xs ${active ? 'text-slate-300' : 'text-slate-400'}`}
+              >
+                {new Date(conv.updatedAt).toLocaleDateString('zh-CN', {
+                  month: '2-digit',
+                  day: '2-digit',
+                })}
+              </div>
+            </Link>
+          );
+        })}
+      </aside>
+
+      <div className="relative flex min-w-0 flex-1 flex-col">
       {/* ① 消息区：永远渲染，自己滚 */}
       <div
         ref={listRef}
@@ -421,8 +471,11 @@ export default function ChatClient({
           type="button"
           disabled={isLoading}
           onClick={async () => {
-            await createConversation(); // ① 库里新开一条
-            setMessages([]); // ② 顺便清掉屏幕
+            // ★ 新开一条后必须「跳过去」。
+            //   只 refresh 不够：URL 里的 ?c= 还指着旧会话，页面会继续显示旧的。
+            const id = await createConversation();
+            setMessages([]); // 清掉屏幕（其实 key 变了会重建，这行只是让过渡更干净）
+            router.push(`/chat?c=${id}`);
           }}
           className="rounded border px-4 py-2"
         >
@@ -462,6 +515,7 @@ export default function ChatClient({
           </button>
         )}
       </form>
+      </div>
     </div>
   );
 }

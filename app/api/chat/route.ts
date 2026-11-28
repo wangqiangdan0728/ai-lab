@@ -13,14 +13,29 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { messages, conversationId } = body;
   const lastUser = messages[messages.length - 1];
+  const userText =
+    lastUser.parts?.map((p: any) => p.text ?? '').join('') ?? '';
+
+  // ★ 是不是这条会话的第一句话？—— 必须「先数、再写」，顺序反了就永远数是 1。
+  const isFirstMessage =
+    (await prisma.message.count({ where: { conversationId } })) === 0;
 
   await prisma.message.create({
     data: {
       conversationId,
       role: 'user',
-      content: lastUser.parts?.map((p: any) => p.text ?? '').join('') ?? '',
+      content: userText,
     },
   });
+
+  // ★ 第一句话决定标题（前 20 字）。
+  //   以前标题永远是「新对话」，侧边栏里十条全叫一个名字，等于没用。
+  if (isFirstMessage && userText.trim()) {
+    await prisma.conversation.update({
+      where: { id: conversationId },
+      data: { title: userText.replace(/\s+/g, ' ').trim().slice(0, 20) },
+    });
+  }
 
   const result = streamText({
     model: deepSeek('deepseek-flash'),
